@@ -1,62 +1,49 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from typing import List
+from api.help_fun import get_db
 from api.schemas import *
 from api.model import *
 from api.data import *
+from api.routers.service_providers import verify_password, hash_password
 
 router = APIRouter()
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 
-@router.post("/", response_model=User)
-def create_user(user: User, db: Session = Depends(get_db)):
-    db_user = UserModel(name=user.name, password=user.password)
-    db.add(db_user)
+# change the password of a user
+@router.post("/change_password", response_model=UserResponse)
+def change_password(request: ChangePasswordRequest, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.reg_number == request.reg_number).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    #check if the current password is correct
+    if not verify_password(request.current_password, user.password_hash):
+        raise HTTPException(status_code=400, detail="Incorrect password")
+    #hash the new password
+    user.password_hash = hash_password(request.new_password)
     db.commit()
-    db.refresh(db_user)
-    return db_user
+    return user
 
-@router.get("/{user_id}", response_model=User)
-def get_user(user_id: int, db: Session = Depends(get_db)):
-    user = db.query(UserModel).filter(UserModel.id == user_id).first()
+
+# Get a single user
+@router.get("/user/{reg_number}", response_model=UserResponse)
+def admin_get_user(reg_number:str, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.reg_number == reg_number).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return user
 
-@router.post("/{user_id}/offer_service/", response_model=Service)
-def offer_service(user_id: int, service: Service, db: Session = Depends(get_db)):
-    user = db.query(UserModel).filter(UserModel.id == user_id).first()
+#edit a user
+@router.put("/edit_user/{reg_number}")
+def admin_edit_user(user: UserCreate, db: Session = Depends(get_db)):
+    editing_user = db.query(User).filter(User.reg_number == user.reg_number).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-
-    db_service = ServiceModel(name=service.name, description=service.description)
-    db.add(db_service)
-    
-    user.services_offered.append(db_service)
-    
+    editing_user.name = user.name.capitalize()
+    editing_user.surname = user.surname.capitalize()
+    editing_user.reg_number = user.reg_number.lower()
+    editing_user.email = user.email
+    editing_user.phone_number = user.phone_number
     db.commit()
-    db.refresh(user)
-    return db_service
+    return {"message": "User updated successfully"}
 
-@router.get("/{user_id}/services_offered", response_model=List[Service])
-def get_offered_services(user_id: int, db: Session = Depends(get_db)):
-    user = db.query(UserModel).filter(UserModel.id == user_id).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    
-    return user.services_offered
-
-@router.get("/{user_id}/services_received", response_model=List[Service])
-def get_received_services(user_id: int, db: Session = Depends(get_db)):
-    user = db.query(UserModel).filter(UserModel.id == user_id).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    
-    return user.services_received

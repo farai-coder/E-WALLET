@@ -1,36 +1,45 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from api.model import *
+from typing import List
+from api.help_fun import get_db
 from api.schemas import *
+from api.model import *
 from api.data import *
-
 router = APIRouter()
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 
-@router.post("/", response_model=Transaction)
-def create_transaction(transaction: Transaction, db: Session = Depends(get_db)):
-    sender_wallet = db.query(WalletModel).filter(WalletModel.id == transaction.sender_wallet_id).first()
-    receiver_wallet = db.query(WalletModel).filter(WalletModel.id == transaction.receiver_wallet_id).first()
 
-    if sender_wallet and receiver_wallet and sender_wallet.balance >= transaction.amount:
-        sender_wallet.balance -= transaction.amount
-        receiver_wallet.balance += transaction.amount
-
-        db_transaction = TransactionModel(**transaction.dict())
-        db.add(db_transaction)
-        db.commit()
-        db.refresh(db_transaction)
-
-        return {"message": "Transaction successful", "transaction": db_transaction}
-    return {"message": "Transaction failed due to insufficient balance or invalid wallets"}, 404
-
-@router.get("/{transaction_id}", response_model=Transaction)
+# Get a single transaction
+@router.get("/transaction/{transaction_id}", response_model=TransactionResponse)
 def get_transaction(transaction_id: int, db: Session = Depends(get_db)):
-    return db.query(TransactionModel).filter(TransactionModel.id == transaction_id).first()
+    transaction = db.query(Transaction).filter(Transaction.id == transaction_id).first()
+    if not transaction:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+    return transaction
+
+
+#get all deposits for a single user
+@router.get("/deposits/{user_id}", response_model=List[TransactionResponse])
+def get_deposits(reg_number:str, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.reg_number == reg_number).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    wallet = db.query(Wallet).filter(Wallet.student_reg_number == user.reg_number).first()
+    if not wallet:
+        raise HTTPException(status_code=404, detail="Wallet not found")
+    deposits = db.query(Transaction).filter(Transaction.wallet_id_from == wallet.id, Transaction.transaction_type == TransactionType.deposit).all()
+    return deposits
+
+#get all withdrawals for a single user
+@router.get("/withdrawals/{user_id}", response_model=List[TransactionResponse])
+def get_withdrawals(reg_number:str, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.reg_number == reg_number).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    wallet = db.query(Wallet).filter(Wallet.student_reg_number == user.reg_number).first()
+    if not wallet:
+        raise HTTPException(status_code=404, detail="Wallet not found")
+    withdrawals = db.query(Transaction).filter(Transaction.wallet_id_from == wallet.id, Transaction.transaction_type == TransactionType.withdrawal).all()
+    return withdrawals
+
