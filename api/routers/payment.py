@@ -1,6 +1,6 @@
 import random
 import string
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from api.data import *
 from api.help_fun import get_db

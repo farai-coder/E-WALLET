@@ -1,12 +1,10 @@
 import datetime
 import enum
 import bcrypt
-from fastapi import FastAPI, Depends, HTTPException
-from pydantic import BaseModel
 from sqlalchemy import (
-    Float, Integer, create_engine, Column, BigInteger, String, Text, Enum, Numeric, DateTime, ForeignKey,event,text
+    Float, Integer, Column, BigInteger, String, Text, Enum, Numeric, DateTime, ForeignKey,event,text
 )
-from sqlalchemy.orm import sessionmaker, relationship, declarative_base, Session
+from sqlalchemy.orm import relationship
 from api.data import Base, engine
 
 

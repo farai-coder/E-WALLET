@@ -1,5 +1,5 @@
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from api.data import *
 from api.help_fun import get_db, hash_password, verify_password
@@ -82,7 +82,6 @@ def edit_service_provider(service_provider_acc: str, service_provider: ServicePr
     editing_service_provider.name = service_provider.name
     editing_service_provider.location = service_provider.location
     editing_service_provider.contact = service_provider.contact
-    editing_service_provider.password_hash = service_provider.password
     editing_service_provider.description = service_provider.description
     db.commit()
     return {"message": "Service Provider updated successfully"}
