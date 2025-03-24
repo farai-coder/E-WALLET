@@ -7,6 +7,7 @@ from api.help_fun import get_db
 from api.model import *
 from api.schemas import DepositRequest, DepositResponse, PaymentRequest, PaymentResponse, WithdrawRequest, WithdrawResponse
 from api.help_fun import generate_transaction_id
+from api.notification_service import NotificationService
 
 router = APIRouter()
 
@@ -49,7 +50,23 @@ def make_payment(request: PaymentRequest, db: Session = Depends(get_db)):
     sender_wallet.balance -= request.amount
     receiver_wallet.balance += request.amount
     db.commit()
-    return PaymentResponse(message="Payment successful", amount=request.amount, sender_id=sender.id, receiver_id=receiver.id)
+    
+    
+    
+    #send email and sms
+    #create body and prepare numbers for the notifications
+    sender_body = f"Paymenent successful for ${request.amount} to : {receiver.reg_number}  "
+    receiver_body = f"Received Paymenent for ${request.amount} from : {sender.reg_number}  "
+    sender_phone_number = f"+263{sender.phone_number}"
+    receiver_phone_number = f"+263{receiver.phone_number}"
+    
+    NotificationService.send_email(sender.email,"transaction",sender_body)
+    
+    #send to both sender and receiver 
+    NotificationService.send_sms(sender_phone_number,sender_body)
+    NotificationService.send_sms(receiver_phone_number,receiver_body)
+    
+    return PaymentResponse(message="Payment successful", amount=request.amount, sender_id=sender.reg_number, receiver_id=receiver.reg_number)
 
 # make a payment from a user to a service provider
 @router.post("/user_to_service_provider", response_model=PaymentResponse)
@@ -88,6 +105,20 @@ def make_payment_to_service_provider(request: PaymentRequest, db: Session = Depe
     sender_wallet.balance -= request.amount
     receiver_wallet.balance += request.amount
     db.commit()
+    
+    #create body and prepare numbers for the notifications
+    sender_body = f"Paymenent successful for ${request.amount} to : {receiver.name}  "
+    receiver_body = f"Received Paymenent for ${request.amount} from : {sender.reg_number}  "
+    sender_phone_number = f"+263{sender.phone_number}"
+    receiver_phone_number = f"+263{receiver.contact}"
+    
+    NotificationService.send_email(sender.email,"transaction",sender_body)
+    
+    #send to both sender and receiver 
+    NotificationService.send_sms(sender_phone_number,sender_body)
+    NotificationService.send_sms(receiver_phone_number,receiver_body)
+    
+    
     return PaymentResponse(message="Payment successful", amount=request.amount, sender_id=sender.reg_number, receiver_id=receiver.account_number)
 
 # make a payment from a service provider to a service provider
@@ -127,6 +158,19 @@ def make_payment_to_service_provider(request: PaymentRequest, db: Session = Depe
     sender_wallet.balance -= request.amount
     receiver_wallet.balance += request.amount
     db.commit()
+    
+    #create body and prepare numbers for the notifications
+    sender_body = f"Paymenent successful for ${request.amount} to : {receiver.name}  "
+    receiver_body = f"Received Paymenent for ${request.amount} from : {sender.name}  "
+    sender_phone_number = f"+263{sender.contact}"
+    receiver_phone_number = f"+263{receiver.contact}"
+    
+    
+    
+    #send to both sender and receiver 
+    NotificationService.send_sms(sender_phone_number,sender_body)
+    
+    NotificationService.send_sms(receiver_phone_number,receiver_body)
     return PaymentResponse(message="Payment successful", amount=request.amount, sender_id=sender.account_number, receiver_id=receiver.account_number)
 
 
@@ -147,7 +191,7 @@ def make_deposit(request : DepositRequest , db: Session = Depends(get_db)):
         transaction_id = generate_transaction_id(TransactionType.deposit,db),
         wallet_id_to=user_wallet.id,
         amount=request.amount,
-        transaction_type=TransactionType.payment,
+        transaction_type=TransactionType.deposit,
         status=TransactionStatus.completed,
         reference=reference
     )
@@ -157,6 +201,17 @@ def make_deposit(request : DepositRequest , db: Session = Depends(get_db)):
     main_wallet = db.query(Main_Wallet).first()
     main_wallet.total_balance += request.amount
     db.commit()
+    
+    #create body and prepare numbers for the notifications
+    sender_body = f"Deposit successful for ${request.amount} to : {user.reg_number} current wallet balance is ${user_wallet.balance} "
+    
+    sender_phone_number = f"+263{user.phone_number}"
+        
+    NotificationService.send_email(user.email,"transaction",sender_body)
+    
+    #send to both sender and receiver 
+    NotificationService.send_sms(sender_phone_number,sender_body)
+    
     return DepositResponse(message="Deposit Successful",amount=request.amount,student_id=user.reg_number) 
     
 # withdraw money from the user(student) wallet
@@ -191,5 +246,18 @@ def make_withdrawal(request:WithdrawRequest,db:Session= Depends(get_db)):
     main_wallet = db.query(Main_Wallet).first()
     main_wallet.total_balance -= request.amount
     db.commit()
+    
+    #create body and prepare numbers for the notifications
+    sender_body = f"Withdrawal successful for ${request.amount} from : {user.reg_number} current wallet balance is ${user_wallet.balance} "
+    
+    sender_phone_number = f"+263{user.phone_number}"
+    
+    
+    NotificationService.send_email(user.email,"transaction",sender_body)
+    
+    #send to both sender and receiver 
+    NotificationService.send_sms(sender_phone_number,sender_body)
+    
+    
     return DepositResponse(message="Deposit Successful",amount=request.amount,student_id=user.reg_number) 
     

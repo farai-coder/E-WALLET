@@ -102,7 +102,7 @@ class ServiceProvider(Base):
     account_number = Column(String, primary_key=True, unique=True, index=True)
     name = Column(String(255), nullable=False)
     description = Column(Text)
-    contact = Column(String(255))
+    contact = Column(String(255)) #phone number
     location = Column(String(255))
     password_hash = Column(Text, nullable=False)
     created_at = Column(DateTime, default=datetime.datetime.now)
