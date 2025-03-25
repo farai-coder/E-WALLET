@@ -14,7 +14,7 @@ def login_user(client: UserLogin, db: Session = Depends(get_db)):
     #check if the user is in the admin or user service_provider table
     admin = db.query(Admin).filter(Admin.username == client.username.lower()).first()
     user = db.query(User).filter(User.reg_number == client.username.lower()).first()
-    service_provider = db.query(ServiceProvider).filter(ServiceProvider.name == client.username.lower()).first()
+    service_provider = db.query(ServiceProvider).filter(ServiceProvider.account_number == client.username).first()
     if admin:
         if verify_password(client.password, admin.password_hash):
             return {"message": "login successful" , "role" : "admin" , "id" : admin.id , "username" : admin.username}

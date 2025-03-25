@@ -133,7 +133,7 @@ class TransactionResponse(BaseModel):
     amount: float
     transaction_type: TransactionType
     status: TransactionStatus
-    reference_id: str
+    reference: str
     created_at: datetime.datetime
 
     class Config:

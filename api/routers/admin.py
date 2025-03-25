@@ -7,6 +7,7 @@ from api.help_fun import get_db, hash_password,verify_password, is_admin, genera
 from api.model import *
 from api.schemas import AdminCreate, AdminEdit, DepositRequest, DepositResponse, ServiceProviderCreate, TransactionResponse, UserCreate, UserResponse, WalletResponse 
 import pandas as pd
+from api.notification_service import NotificationService
 
 router = APIRouter()
 
@@ -16,7 +17,7 @@ def generate_account_number(session):
     prefix = "SP"
     
     while True:
-        unique_part = ''.join(random.choices(string.digits, k=8))  # 10-digit random number
+        unique_part = ''.join(random.choices(string.digits, k=8))  # 8-digit random number
         account_number = f"{prefix}{unique_part}"
         
         # Check if the account number already exists
@@ -263,12 +264,13 @@ def deposit_funds(admin_id:int,password:str,deposit_request: DepositRequest, db:
     main_wallet.total_balance += deposit_request.amount
     db.commit()
     
+    #create body and prepare numbers for the notifications
+    receiver_body = f"Received Paymenent for ${deposit_request.amount} from : {user.reg_number}  "
+    receiver_phone_number = f"+263{user.phone_number}"
+    
+    #send to receiver 
+    NotificationService.send_sms(receiver_phone_number,receiver_body)
     return {"message": "Funds deposited successfully"}
-
-
-
-
-
 
 ### end of users logic ###
 
@@ -291,7 +293,7 @@ def create_service_provider(service_provider: ServiceProviderCreate, db: Session
         name=service_provider.name,
         location=service_provider.location,
         contact=service_provider.contact,
-        password=hash_password(service_provider.password),
+        password_hash=hash_password(service_provider.password),
         description=service_provider.description
     )
     db.add(new_service_provider)
@@ -337,7 +339,7 @@ def admin_get_service_providers(admin_id: int,password:str, db: Session = Depend
 ### end of service provider loic ###
 
 # get all walllets
-@router.get("/wallets", response_model=list[WalletResponse])
+@router.get("/wallets")
 def admin_get_wallets(admin_id: int, password :str, db: Session = Depends(get_db)):
     # check  is admin is authorized
     if not is_admin(db,admin_id,password):
@@ -346,7 +348,7 @@ def admin_get_wallets(admin_id: int, password :str, db: Session = Depends(get_db
     return wallets
 
 # Get all transactions
-@router.get("/transactions", response_model=list[TransactionResponse])
+@router.get("/transactions")
 def admin_get_transactions(admin_id: int, password:str, db: Session = Depends(get_db)):
     # check  is admin is authorized
     if not is_admin(db,admin_id,password):

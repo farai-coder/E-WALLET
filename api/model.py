@@ -115,8 +115,8 @@ class ServiceProvider(Base):
 class Service(Base):
     #table containing all the services provided by a service provider
     __tablename__ = "services"
-    id = Column(BigInteger, primary_key=True, index=True,autoincrement=True)
-    service_provider_acc = Column(BigInteger, ForeignKey("service_providers.account_number"), nullable=False)
+    id = Column(Integer, primary_key=True, index=True,autoincrement=True)
+    service_provider_acc = Column(String, ForeignKey("service_providers.account_number"), nullable=False)
     name = Column(String(255), nullable=False)
     description = Column(Text)
     

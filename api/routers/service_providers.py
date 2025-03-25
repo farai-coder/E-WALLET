@@ -28,7 +28,7 @@ def add_service(service: ServiceCreate, db: Session = Depends(get_db)):
 
 #remove a service
 @router.delete("/delete_service/{service_id}")
-def delete_service(service_id:str, db: Session = Depends(get_db)):
+def delete_service(service_id:int, db: Session = Depends(get_db)):
     service = db.query(Service).filter(Service.id == service_id).first()
     if not service:
         raise HTTPException(status_code=404, detail="Service not found")
@@ -38,7 +38,7 @@ def delete_service(service_id:str, db: Session = Depends(get_db)):
     
 #edit a service
 @router.put("/edit_service/{service_id}")
-def edit_service(service_id: str, service: ServiceCreate, db: Session = Depends(get_db)):
+def edit_service(service_id: int, service: ServiceCreate, db: Session = Depends(get_db)):
     editing_service = db.query(Service).filter(Service.id == service_id).first()
     if not editing_service:
         raise HTTPException(status_code=404, detail="Service not found")
@@ -65,7 +65,7 @@ def get_all_services(db: Session = Depends(get_db)):
 
 #get a single service
 @router.get("/service/{service_id}")
-def get_service(service_id: str, db: Session = Depends(get_db)):
+def get_service(service_id: int, db: Session = Depends(get_db)):
     service = db.query(Service).filter(Service.id == service_id).first()
     if not service:
         raise HTTPException(status_code=404, detail="Service not found")
